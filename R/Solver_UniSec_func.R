@@ -14,14 +14,14 @@ Slover_UniSec_func <- function(data,model,guess,method){
   message("x(2) = beta1 * x + beta2 * x(1)")
   message('Optimizing...')
   userdata = data #Suggest the time step by 0.1
+  # If you did not guess the number, the program will guess parms from 0 . And the yini will guess from the data you have upload
+  userdata_field <- unlist(c(names(userdata)))
+  #remove 'seq' and 'time'
+  delSeq <- which(userdata_field == 'seq')
+  userdata_field = userdata_field[-delSeq]
+  deltime <- which(userdata_field == 'time')
+  userdata_field = userdata_field[-deltime]
   if (all(is.na(guess))){
-    # If you did not guess the number, the program will guess parms from 0 . And the yini will guess from the data you have upload
-    userdata_field <- unlist(c(names(userdata)))
-    #remove 'seq' and 'time'
-    delSeq <- which(userdata_field == 'seq')
-    userdata_field = userdata_field[-delSeq]
-    deltime <- which(userdata_field == 'time')
-    userdata_field = userdata_field[-deltime]
     # We can use the average of documents' values in head 5
     guess = c(0,0,userdata[1,userdata_field[1]],0,0,0)
     # message(paste("The optimization method is",method,"."))
@@ -29,6 +29,12 @@ Slover_UniSec_func <- function(data,model,guess,method){
     # message(paste('beta1:',guess[1],', beta2:',guess[2],', init01(x_0):',guess[3],', init02(dx_0):',guess[4],', init03(dx_0):',guess[5],', init04(d2x_0):',guess[6]))
   }else{
     # message('The initial guess values you input are')
+    if(length(guess) == 6){
+      guess = guess
+    }else{
+      stop('Your model is a univariate second-order differential equation that the guess values need 6 numbers. like c(0,0,0,0,0,0)')
+    }
+
     # message(guess)
   }
   user_CalcUniSec_data <- calc_UniSec_func(userdata,guess,method=method)

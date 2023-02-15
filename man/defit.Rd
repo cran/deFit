@@ -62,6 +62,8 @@ result1 <- defit(data = example1, model = model1)
 #> Estimating R_squared
 #> Estimating RMSE
 #> Estimating Hessian
+# result1$table get the result
+# names(result1) get all names of object
 }\if{html}{\out{</div>}}
 }
 \examples{
@@ -82,7 +84,6 @@ model2 <- '
 result2 <- defit(data = example2, model = model2)
 result2
 # extract details and values
-names(result2)
 result2$summary()
 result2$userdata
 result2$parameter$par

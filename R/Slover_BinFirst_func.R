@@ -16,22 +16,26 @@ Slover_BinFirst_func <- function(data,model,guess,method){
   message('dy/dt = beta3 * x + beta4 * y')
   message('Optimizing...')
   userdata = data #Suggest the time step by 0.1
+  # If you did not guess the number, the program will guess parms from 0 . And the yini will guess from the data you have upload
+  userdata_field <- unlist(c(names(userdata)))
+  #remove 'seq' and 'time'
+  delSeq <- which(userdata_field == 'seq')
+  userdata_field = userdata_field[-delSeq]
+  deltime <- which(userdata_field == 'time')
+  userdata_field = userdata_field[-deltime]
+  # We can use the average of documents' values in head 5
   if (all(is.na(guess))){
-    # If you did not guess the number, the program will guess parms from 0 . And the yini will guess from the data you have upload
-    userdata_field <- unlist(c(names(userdata)))
-    #remove 'seq' and 'time'
-    delSeq <- which(userdata_field == 'seq')
-    userdata_field = userdata_field[-delSeq]
-    deltime <- which(userdata_field == 'time')
-    userdata_field = userdata_field[-deltime]
-    # We can use the average of documents' values in head 5
     guess = c(0,0,0,0,userdata[1,userdata_field[1]],userdata[1,userdata_field[2]])
     # message(paste("The optimization method is",method,"."))
     # print("The initial guess values are")
     # print(paste('beta1:',guess[1],', beta2:',guess[2],', beta3:',guess[3],', beta4:',guess[4],', x0:',guess[5],', y0:',guess[6]))
   }else{
     # message('The initial guess values you input are')
-    # message(guess)
+    if(length(guess) == 6){
+      guess = guess
+    }else{
+      stop('Your model is a bivariate first-order differential equation that the guess values need 6 numbers. like c(0,0,0,0,0,0)')
+    }
   }
   user_calc_data <- calc_BinFirst_func(userdata,guess,method=method)
   Predictor_data <- Predictor_BinFirst_func(userdata,user_calc_data)

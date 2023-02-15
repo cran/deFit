@@ -18,6 +18,8 @@
 #'    X(2) ~ X(1) + X
 #'   '
 #' result1 <- defit(data = example1, model = model1)
+#' # result1$table get the result
+#' # names(result1) get all names of object
 #' ```
 #' @md
 #' @returns object: directly type the defit object will print all results. The function summary is used to print the summary of all results, and the exact values of each result can be extracted by the "$" operator.
@@ -50,7 +52,6 @@
 #' result2 <- defit(data = example2, model = model2)
 #' result2
 #' # extract details and values
-#' names(result2)
 #' result2$summary()
 #' result2$userdata
 #' result2$parameter$par
