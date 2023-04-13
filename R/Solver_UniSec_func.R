@@ -1,6 +1,6 @@
 #' Core code of univariable second-order differential equation
 #'
-#' @param data Users' data
+#' @param data User's data
 #' @param model model's class is dataframe.
 #' @param guess Guess values that contain coefficient and initial values.
 #' @param method "Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN" and "Brent"
@@ -8,6 +8,10 @@
 #' @return The result of optimization, SE, RMSE, r-squared, users' data, predictor data and output table.
 
 Slover_UniSec_func <- function(data,model,guess,method){
+  var_model = model
+  var_model = var_model[which(var_model['operator']=='=~'),]
+  var_model = var_model[(which(var_model['field'] != 'time')),]
+
   # print('------Begin to estimate the parameters -------')
   message('Program will fit the data with a univariate second-order differential equation.')
   message('The differential equation is:')
@@ -37,20 +41,21 @@ Slover_UniSec_func <- function(data,model,guess,method){
 
     # message(guess)
   }
-  user_CalcUniSec_data <- calc_UniSec_func(userdata,guess,method=method)
-  Predictor_UniSec_data <- Predictor_UniSec_func(userdata,user_CalcUniSec_data)
-  squareR_UniSec_data <- SquareR_UniSec_func(userdata,Predictor_UniSec_data)
-  rmse_UniSec_data <- RMSE_UniSec_func(userdata,Predictor_UniSec_data)
-  SE_UniSec_data <- Hessian_UniSec_func(user_CalcUniSec_data$hessian)
-  outputDE1 <- paste(userdata_field[1],'(2)=',user_CalcUniSec_data$par[1],'*',userdata_field[1],'+',user_CalcUniSec_data$par[2],' * ',userdata_field[1],'(1)')
-  outputDE2 <- paste('Init t0:',user_CalcUniSec_data$par[3])
+  user_CalcUniSec_data <- calc_UniSec_func(userdata,guess,method=method,model=model)
+  Predictor_UniSec_data <- Predictor_UniSec_func(user_CalcUniSec_data$detailtable,model)
+  squareR_UniSec_data <- SquareR_UniSec_func(Predictor_UniSec_data,model)
+  rmse_UniSec_data <- RMSE_UniSec_func(Predictor_UniSec_data,model)
+  rmse_UniSec_data <- paste('RMSE_',var_model[1,'field'],' = ',rmse_UniSec_data,sep='')
+  SE_UniSec_data <- Hessian_UniSec_func(user_CalcUniSec_data$calc_res$hessian)
+  outputDE1 <- paste(userdata_field[1],'(2)=',user_CalcUniSec_data$calc_res$par[1],'*',userdata_field[1],'+',user_CalcUniSec_data$calc_res$par[2],'*',userdata_field[1],'(1)')
+  outputDE2 <- paste('Init t0:',user_CalcUniSec_data$calc_res$par[3])
   outtable <- data.frame()
-  outtable[seq(1,6,by=1),'parameter'] = c(paste(userdata_field[1],'(0) to ',userdata_field[1],'(2)',sep = ""),
+  outtable[seq(1,3,by=1),'parameter'] = c(paste(userdata_field[1],'(0) to ',userdata_field[1],'(2)',sep = ""),
                                          paste(userdata_field[1],'(1) to ',userdata_field[1],'(2)',sep = ""),
-                                         'init01','init02','init03','init04')
-  outtable['value'] = user_CalcUniSec_data$par
-  outtable['SE'] = c(SE_UniSec_data[1,1],SE_UniSec_data[2,2],SE_UniSec_data[3,3],SE_UniSec_data[4,4],SE_UniSec_data[5,5],SE_UniSec_data[6,6])
-  IsConvergence = user_CalcUniSec_data$convergence
+                                         paste('init_',var_model[1,'field'],sep='')) #,'init02','init03','init04')
+  outtable['value'] = user_CalcUniSec_data$calc_res$par[1:3]
+  outtable['SE'] = c(SE_UniSec_data[1,1],SE_UniSec_data[2,2],SE_UniSec_data[3,3])#,SE_UniSec_data[4,4],SE_UniSec_data[5,5],SE_UniSec_data[6,6])
+  IsConvergence = user_CalcUniSec_data$calc_res$convergence
   if(IsConvergence == 0){
     IsConvergence = 'successful:successful completion:(which is always the case for SANN and Brent)'
   }else if(IsConvergence == 1){
@@ -65,7 +70,7 @@ Slover_UniSec_func <- function(data,model,guess,method){
     IsConvergence = 'Something error")'
   }
   return(list(userdata = userdata,
-              Parameter = user_CalcUniSec_data,
+              Parameter = user_CalcUniSec_data$calc_res,
               DifferentialEquational = c(outputDE1,outputDE2),
               Predictor = Predictor_UniSec_data,
               Rsquared = squareR_UniSec_data,
@@ -104,8 +109,18 @@ min_UniSec_func <- function(userdata,x0){
   mid_res = sum((mini_UniSec_data[,2] - userdata[user_data_field[1]]) **2 )
   return(mid_res)
 }
-calc_UniSec_func <- function(userdata,guessdata,method){
+calc_UniSec_func <- function(userdata,guessdata,method,model){
   message('Finishing optimization...')
+
+  # ###the variable of model
+  var_model = model
+  var_model = var_model[which(var_model['operator']=='=~'),]
+  var_model = var_model[(which(var_model['field'] != 'time')),]
+
+  mid_detail_table = data.frame(seq=1:nrow(userdata))
+  mid_detail_table['time'] = userdata[,'time']
+  mid_detail_table[var_model[1,'field']] = userdata[,var_model[1,'field']]
+  mytry <- tryCatch({
   mid_calc_BinFirst_data = stats::optim(c(guessdata[1],
                                           guessdata[2],
                                           guessdata[3],
@@ -117,50 +132,78 @@ calc_UniSec_func <- function(userdata,guessdata,method){
                                         method = method,
                                         userdata = userdata,
                                         hessian=TRUE)
-  return(mid_calc_BinFirst_data)
+  },
+  warning = function(war){
+    message('Waring @ ')
+  },
+  error = function(err){
+    message('Error @  ',err,'You can try method ="Nelder-Mead"')
+  }
+  # ,finally = {
+  #   message('next...subject...')
+  # }
+  )
+  mid_detail_table['beta1'] = mid_calc_BinFirst_data['par'][[1]][1]
+  mid_detail_table['beta2'] = mid_calc_BinFirst_data['par'][[1]][2]
+  mid_detail_table['init01'] = mid_calc_BinFirst_data['par'][[1]][3]
+  mid_detail_table['init02'] = mid_calc_BinFirst_data['par'][[1]][4]
+  mid_detail_table['init03'] = mid_calc_BinFirst_data['par'][[1]][5]
+  mid_detail_table['init04'] = mid_calc_BinFirst_data['par'][[1]][6]
+  # print(mid_detail_table)
+  mid_detail_table[is.na(mid_detail_table)] <- 0
+
+  return(list(detailtable=mid_detail_table,calc_res=mid_calc_BinFirst_data))
 }
-Predictor_UniSec_func <- function(userdata,calcdata){
-  mid_times = userdata[,'time']
-  mid_a = calcdata['par'][[1]][1]
-  mid_b = calcdata['par'][[1]][2]
-  mid_initY01 = calcdata['par'][[1]][3]
-  mid_initY02 = calcdata['par'][[1]][4]
-  mid_initDY01 = calcdata['par'][[1]][5]
-  mid_initDY02 = calcdata['par'][[1]][6]
+Predictor_UniSec_func <- function(detailtable,model){
+  mid_detailtable = detailtable
+
+  var_model = model
+  var_model = var_model[which(var_model['operator']=='=~'),]
+  var_model = var_model[(which(var_model['field'] != 'time')),]
+
+  detailtable[paste('solver_',var_model[1,'field'],sep='')]= NA
+
+  times = sort(unique(mid_detailtable[,'time']),decreasing = FALSE)
+  mid_a = mean(mid_detailtable[,'beta1'])
+  mid_b = mean(mid_detailtable[,'beta2'])
+  mid_initY01 = mean(mid_detailtable[,'init01'])
+  mid_initY02 = mean(mid_detailtable[,'init02'])
+  mid_initDY01 = mean(mid_detailtable[,'init03'])
+  mid_initDY02 = mean(mid_detailtable[,'init04'])
   mid_usersol_data <- deSolve::daspk(y=c(y1=mid_initY01,y2=mid_initY02),
                                      dy = c(dy1=mid_initDY01,dy2=mid_initDY02),
-                                     times=mid_times,
+                                     times=times,
                                      res=solve_UniSec_func,
                                      parms=c(mid_a,mid_b))
   #remove 'seq' and 'time
-  user_data_field <- names(userdata)
-  delSeq <- which(user_data_field == 'seq')
-  user_data_field = user_data_field[-delSeq]
-  deltime <- which(user_data_field == 'time')
-  user_data_field = user_data_field[-deltime]
-  # Change the field(columns) to "solver_***"
-  # because of the equational is Univariable Second order differential the values belong of second column, so the value is 2.
-  mid_usersol_data = data.frame(mid_usersol_data)
-  names(mid_usersol_data)[2] <- paste('solver_',user_data_field[1],sep = '')
-  return(mid_usersol_data[,1:2])
+  mid_usersol_data <- data.frame(mid_usersol_data)
+  detailtable[,paste('solver_',var_model[1,'field'],sep='')] = mid_usersol_data[mid_usersol_data['time'] == detailtable[,'time'],'y1']
+  return(detailtable)
 }
-SquareR_UniSec_func <- function(userdata,Predictor_data){
+SquareR_UniSec_func <- function(Predictor_data,model){
   message('Estimating R_squared')
-  userDF <- merge(userdata,Predictor_data,by='time')
+
+  var_model = model
+  var_model = var_model[which(var_model['operator']=='=~'),]
+  var_model = var_model[(which(var_model['field'] != 'time')),]
+
   # SSxe <- sum((userDF[,3] - userDF[,4])**2)
   # SSx <- sum((userDF[,3] - mean(userDF[,3]))**2)
   # #Square_x <- SSxe / SSx
   # SquareR_ <- SSxe / SSx
   # return(1 - SquareR_)
-  r_squared01 = cor(userDF[,3],userDF[,4]) **2
-  name1 = paste('r_squared',names(userDF)[3],': ',r_squared01,sep = "")
+  r_squared01 = stats::cor(Predictor_data[,var_model[1,'field']],Predictor_data[,paste('solver_',var_model[1,'field'],sep='')]) **2
+  name1 = paste('r_squared_',var_model[1,'field'],' = ',r_squared01,sep = "")
   return(name1)
 }
-RMSE_UniSec_func <- function(userdata,Predictor_data){
+RMSE_UniSec_func <- function(Predictor_data,model){
   message('Estimating RMSE')
-  userDF <- merge(userdata,Predictor_data,by='time')
-  SSxe <- sum((userDF[,3] - userDF[,4])**2)
-  RMSEx <- sqrt(SSxe / NROW(userDF[,'time']))
+
+  var_model = model
+  var_model = var_model[which(var_model['operator']=='=~'),]
+  var_model = var_model[(which(var_model['field'] != 'time')),]
+  SSxe <- sum((Predictor_data[,var_model[1,'field']] - Predictor_data[,paste('solver_',var_model[1,'field'],sep = '')])**2)
+  RMSEx <- sqrt(SSxe / NROW(Predictor_data[,'time']))
   return(RMSEx)
 }
 Hessian_UniSec_func <- function(hessian){

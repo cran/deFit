@@ -1,14 +1,19 @@
 #' Core code of Binary first-order differential equational
 #'
-#' @param data Users' data
-#' @param model model's class is dataframe.
+#' @param data User's data
+#' @param model Model's class is dataframe.
 #' @param guess Guess values that contain coefficient and initial values.
 #' @param method "Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN" and "Brent"
 #' @importFrom stats cor
 #'
 #' @return The result of optimization,SE,RMSE,r-squared,users's data,predictor data and output table.
 
-Slover_BinFirst_func <- function(data,model,guess,method){
+Solver_BinFirst_func <- function(data,model,guess,method){
+  # ###the variable of model
+  var_model = model
+  var_model = var_model[which(var_model['operator']=='=~'),]
+  var_model = var_model[(which(var_model['field'] != 'time')),]
+
   # print('------Begin to estimate the parameters -------')
   message('Program will fit the data with a bivariate first-order differential equation.')
   message('The differential equations are:')
@@ -37,14 +42,16 @@ Slover_BinFirst_func <- function(data,model,guess,method){
       stop('Your model is a bivariate first-order differential equation that the guess values need 6 numbers. like c(0,0,0,0,0,0)')
     }
   }
-  user_calc_data <- calc_BinFirst_func(userdata,guess,method=method)
-  Predictor_data <- Predictor_BinFirst_func(userdata,user_calc_data)
-  squareR_data <- SquareR_BinFirst_func(userdata,Predictor_data)
-  user_rmse_data <- RMSE_BinFirst_func(userdata,Predictor_data)
-  SE_data <- Hessian_BinFirst_func(user_calc_data$hessian)
-  outputDE1 <- paste(userdata_field[1],'(1)=',user_calc_data$par[1],'*',userdata_field[1],'+',user_calc_data$par[2],' * ',userdata_field[2],sep = '')
-  outputDE2 <- paste(userdata_field[2],'(1)=',user_calc_data$par[3],'*',userdata_field[1],'+',user_calc_data$par[4],' * ',userdata_field[2],sep = '')
-  outputDE3 <- paste('Init t0_x:',user_calc_data$par[5],', Init t0_y:',user_calc_data$par[6])
+  user_calc_data <- calc_BinFirst_func(userdata,guess,method=method,model=model)
+  Predictor_data <- Predictor_BinFirst_func(user_calc_data$detailtable,model)
+  squareR_data <- SquareR_BinFirst_func(Predictor_data,model)
+  user_rmse_data <- RMSE_BinFirst_func(Predictor_data,model)
+  user_rmse_data <- paste('RMSE_',var_model[1,'field'],' = ',user_rmse_data[1],
+                          ' & RMSE_',var_model[2,'field'],' = ',user_rmse_data[2])
+  SE_data <- Hessian_BinFirst_func(user_calc_data$calc_res$hessian)
+  outputDE1 <- paste(userdata_field[1],'(1)=',user_calc_data$calc_res$par[1],'*',userdata_field[1],'+',user_calc_data$calc_res$par[2],' * ',userdata_field[2],sep = '')
+  outputDE2 <- paste(userdata_field[2],'(1)=',user_calc_data$calc_res$par[3],'*',userdata_field[1],'+',user_calc_data$calc_res$par[4],' * ',userdata_field[2],sep = '')
+  outputDE3 <- paste('Init t0_x:',user_calc_data$calc_res$par[5],', Init t0_y:',user_calc_data$calc_res$par[6])
   outtable <- data.frame()
   outtable[seq(1,6,by=1),'parameter'] = c(paste(userdata_field[1],'(0) to ',userdata_field[1],'(1)',sep = ""),
                                          paste(userdata_field[2],'(0) to ',userdata_field[1],'(1)',sep = ""),
@@ -52,14 +59,14 @@ Slover_BinFirst_func <- function(data,model,guess,method){
                                          paste(userdata_field[2],'(0) to ',userdata_field[2],'(1)',sep = ""),
                                          'init01',
                                          'init02')
-  outtable[,'value'] = user_calc_data$par
+  outtable[,'value'] = user_calc_data$calc_res$par
   outtable[,'SE'] = c(SE_data[1,1],
                       SE_data[2,2],
                       SE_data[3,3],
                       SE_data[4,4],
                       SE_data[5,5],
                       SE_data[6,6])
-  IsConvergence = user_calc_data$convergence
+  IsConvergence = user_calc_data$calc_res$convergence
   if(IsConvergence == 0){
     IsConvergence = 'successful:successful completion:(which is always the case for SANN and Brent)'
   }else if(IsConvergence == 1){
@@ -74,7 +81,7 @@ Slover_BinFirst_func <- function(data,model,guess,method){
     IsConvergence = 'Something error")'
   }
   return(list(userdata = userdata,
-              Parameter = user_calc_data,
+              Parameter = user_calc_data$calc_res,
               DifferentialEquational = c(outputDE1,outputDE2,outputDE3),
               Predictor = Predictor_data,
               Rsquared = squareR_data,
@@ -117,9 +124,20 @@ min_BinFirst_func <- function(x0,userdata){
   return(res)
 }
 
-calc_BinFirst_func <- function(userdata,guessdata,method){
+calc_BinFirst_func <- function(userdata,guessdata,method,model){
   message('Finishing optimization...')
-  mid_calc_BinFirst_data = stats::optim(c(guessdata[1],
+
+  # ###the variable of model
+  var_model = model
+  var_model = var_model[which(var_model['operator']=='=~'),]
+  var_model = var_model[(which(var_model['field'] != 'time')),]
+
+  mid_detail_table = data.frame(seq=1:nrow(userdata))
+  mid_detail_table['time'] = userdata[,'time']
+  mid_detail_table[var_model[1,'field']] = userdata[,var_model[1,'field']]
+  mid_detail_table[var_model[2,'field']] = userdata[,var_model[2,'field']]
+  mytry <- tryCatch({
+    mid_calc_BinFirst_data = stats::optim(c(guessdata[1],
                                           guessdata[2],
                                           guessdata[3],
                                           guessdata[4],
@@ -130,17 +148,48 @@ calc_BinFirst_func <- function(userdata,guessdata,method){
                                         method = method,
                                         userdata = userdata,
                                         hessian=TRUE)
-  return(mid_calc_BinFirst_data)
+  },warning = function(war){
+    message('Waring @ ',war,'You can try use method="Nelder-Mead" ')
+    return(war)
+  },
+  error = function(err){
+    message('Error @  ',err)
+    return(err)
+  },
+  finally = {
+    message('next...')
+  })
+  mid_detail_table['beta1'] = mid_calc_BinFirst_data['par'][[1]][1]
+  mid_detail_table['beta2'] = mid_calc_BinFirst_data['par'][[1]][2]
+  mid_detail_table['beta3'] = mid_calc_BinFirst_data['par'][[1]][3]
+  mid_detail_table['beta4'] = mid_calc_BinFirst_data['par'][[1]][4]
+  mid_detail_table['init01'] = mid_calc_BinFirst_data['par'][[1]][5]
+  mid_detail_table['init02'] = mid_calc_BinFirst_data['par'][[1]][6]
+
+  mid_detail_table[is.na(mid_detail_table)] <- 0
+
+  return(list(detailtable=mid_detail_table,calc_res=mid_calc_BinFirst_data))
 
 }
-Predictor_BinFirst_func <- function(userdata,calcdata){
-  mid_times = userdata[,'time']
-  mid_a = calcdata['par'][[1]][1]
-  mid_b = calcdata['par'][[1]][2]
-  mid_c = calcdata['par'][[1]][3]
-  mid_d = calcdata['par'][[1]][4]
-  mid_initX = calcdata['par'][[1]][5]
-  mid_initY = calcdata['par'][[1]][6]
+Predictor_BinFirst_func <- function(detailtable,model){
+
+  mid_detailtable = detailtable
+
+  var_model = model
+  var_model = var_model[which(var_model['operator']=='=~'),]
+  var_model = var_model[(which(var_model['field'] != 'time')),]
+
+  detailtable[paste('solver_',var_model[1,'field'],sep='')]= NA
+  detailtable[paste('solver_',var_model[2,'field'],sep='')]= NA
+
+  times = sort(unique(mid_detailtable[,'time']),decreasing = FALSE)
+  # mid_detailtable[is.na(mid_detailtable)] <- 0
+  mid_a = mean(mid_detailtable[,'beta1'])
+  mid_b = mean(mid_detailtable[,'beta2'])
+  mid_c = mean(mid_detailtable[,'beta3'])
+  mid_d = mean(mid_detailtable[,'beta4'])
+  mid_initX = mean(mid_detailtable[,'init01'])
+  mid_initY = mean(mid_detailtable[,'init02'])
   mid_parms <- c(a = mid_a,
                  b = mid_b,
                  c = mid_c,
@@ -148,28 +197,22 @@ Predictor_BinFirst_func <- function(userdata,calcdata){
   mid_state <- c(x = mid_initX,
                  y = mid_initY)
   mid_usersol_data <- deSolve::ode(y=mid_state,
-                                   times=mid_times,
+                                   times=times,
                                    func=solve_BinFirst_func,
                                    parms=mid_parms)
   #remove 'seq' and 'time
-  user_data_field <- names(userdata)
-  delSeq <- which(user_data_field == 'seq')
-  user_data_field = user_data_field[-delSeq]
-  deltime <- which(user_data_field == 'time')
-  user_data_field = user_data_field[-deltime]
-  # Change the field to "solver_***"
-  PredictorColumns <- unlist(c(names(userdata)))
-  solverNum1 <- which(PredictorColumns == user_data_field[1])
-  mid_usersol_data = data.frame(mid_usersol_data)
-  names(mid_usersol_data)[2] <- paste('solver_',user_data_field[1],sep = '')
-  solverNum2 <- which(PredictorColumns == user_data_field[2])
-  names(mid_usersol_data)[3] <- paste('solver_',user_data_field[2],sep = '')
-  return(mid_usersol_data)
-
+  mid_usersol_data <- data.frame(mid_usersol_data)
+  detailtable[,paste('solver_',var_model[1,'field'],sep='')] = mid_usersol_data[mid_usersol_data['time'] == detailtable[,'time'],'x']
+  detailtable[,paste('solver_',var_model[2,'field'],sep='')] = mid_usersol_data[mid_usersol_data['time'] == detailtable[,'time'],'y']
+  return(detailtable)
 }
-SquareR_BinFirst_func <- function(userdata,Predictor_data){
-  #
-  userDF <- merge(userdata,Predictor_data,by='time')
+SquareR_BinFirst_func <- function(Predictor_data,model){
+  message('Estimating R_squared')
+
+  var_model = model
+  var_model = var_model[which(var_model['operator']=='=~'),]
+  var_model = var_model[(which(var_model['field'] != 'time')),]
+
   # SSxe <- sum((userDF[,3] - userDF[,5])**2)
   # SSx <- sum((userDF[,3] - mean(userDF[,3]))**2)
   # #Square_x <- SSxe / SSx
@@ -178,22 +221,24 @@ SquareR_BinFirst_func <- function(userdata,Predictor_data){
   # #Square_y <- SSye / SSy
   # SquareR_ <- (SSxe + SSye) / (SSx + SSy)
   # return(1 - SquareR_)
-
-  r_squared01 = stats::cor(userDF[,3],userDF[,5]) **2
-  r_squared02 = stats::cor(userDF[,4],userDF[,6]) **2
-  name1 = paste('r_squared',names(userDF)[3],': ',r_squared01,sep = "")
-  name2 = paste('r_squared',names(userDF)[4],': ',r_squared02,sep = "")
-  message('Estimating R_squared')
+  r_squared01 = stats::cor(Predictor_data[,var_model[1,'field']],Predictor_data[,paste('solver_',var_model[1,'field'],sep='')]) **2
+  r_squared02 = stats::cor(Predictor_data[,var_model[2,'field']],Predictor_data[,paste('solver_',var_model[2,'field'],sep='')]) **2
+  name1 = paste('r_squared_',var_model[1,'field'],' = ',r_squared01,sep = "")
+  name2 = paste('r_squared_',var_model[2,'field'],' = ',r_squared02,sep = "")
   return(c(name1,name2))
 }
 
-RMSE_BinFirst_func <- function(userdata,Predictor_data){
+RMSE_BinFirst_func <- function(Predictor_data,model){
   message('Estimating RMSE')
-  userDF <- merge(userdata,Predictor_data,by='time')
-  SSxe <- sum((userDF[,3] - userDF[,5])**2)
-  RMSEx <- sqrt(SSxe / NROW(userDF[,'time']))
-  SSye <- sum((userDF[,4] - userDF[,6])**2)
-  RMSEy <- sqrt(SSye / NROW(userDF[,'time']))
+
+  var_model = model
+  var_model = var_model[which(var_model['operator']=='=~'),]
+  var_model = var_model[(which(var_model['field'] != 'time')),]
+
+  SSxe <- sum((Predictor_data[,var_model[1,'field']] - Predictor_data[,paste('solver_',var_model[1,'field'],sep = '')])**2)
+  RMSEx <- sqrt(SSxe / NROW(Predictor_data[,'time']))
+  SSye <- sum((Predictor_data[,var_model[2,'field']] - Predictor_data[,paste('solver_',var_model[2,'field'],sep = '')])**2)
+  RMSEy <- sqrt(SSye / NROW(Predictor_data[,'time']))
   return(c(RMSEx,RMSEy))
 }
 

@@ -7,7 +7,7 @@
 Slover_UniSec_func(data, model, guess, method)
 }
 \arguments{
-\item{data}{Users' data}
+\item{data}{User's data}
 
 \item{model}{model's class is dataframe.}
 

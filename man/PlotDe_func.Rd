@@ -4,12 +4,16 @@
 \alias{PlotDe_func}
 \title{Plot all data}
 \usage{
-PlotDe_func(userdata, calcdata)
+PlotDe_func(userdata, predictor, model, chooseModel)
 }
 \arguments{
-\item{userdata}{Users's data.}
+\item{userdata}{User's data.}
 
-\item{calcdata}{Predictor's data.}
+\item{predictor}{The data of differential equation model}
+
+\item{model}{The model of standardization}
+
+\item{chooseModel}{c(2,1) or c(2,1)}
 }
 \value{
 The plot of all data.

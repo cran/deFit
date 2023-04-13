@@ -1,6 +1,6 @@
 #' Fitting Differential Equations to Time Series Data
 #'
-#' @description Use numerical optimization to fit ordinary differential equations (ODEs) to time series data to examine the dynamic relationships between variables or the characteristics of a dynamical system. It can now be used to estimate the parameters of ODEs up to second order.
+#' @description Use numerical optimization to fit ordinary differential equations (ODEs) to time series data to examine the dynamic relationships between variables or the characteristics of a dynamical system. It can now be used to estimate the parameters of ODEs up to second order, and can also apply to multilevel systems.
 #'
 #' @param data a data frame containing all model variables. The "time" column must be included.
 #' @param model a string specifying the model to be used. The "=~" operator is used to define variables, with the name of the variable user defined on the left and the name of the variable in the data on the right. The '~' operator specifies a differential equation, with the dependent variable on the left and the independent variables on the right. See also ‘Details’.
@@ -10,7 +10,7 @@
 #' @details We suggest choosing the method by default. The guess values contain the coefficient of the model and initial values (the values of t0). Different models have different number of values.
 #' @details Time(param) sequence for which output is wanted; the first value of times must be the initial time.
 #' ```{r}
-#' #eg1. An example of univariate second-order differential equation (damped oscillator model)
+#' # eg1. An example of the univariate second-order differential equation (damped oscillator model)
 #' data('example1')
 #' model1 <- '
 #'    X =~ myX
@@ -20,6 +20,33 @@
 #' result1 <- defit(data = example1, model = model1)
 #' # result1$table get the result
 #' # names(result1) get all names of object
+#'
+#' #--------------
+#' # eg3. An example of the multilevel univariate second-order differential equation
+#' data('example3')
+#' model3 <- '
+#'    X =~ current
+#'    time =~ myTime
+#'    X(2) ~ X(1) + X + (1 + X(1) + X | year)
+#'    '
+#' example3_use <- example3[(example3["year"] >= 2015)&(example3["year"] <= 2018),] # Note: select a subset of the data as an example.
+#' example3_c <- scale_within(example3_use, model3) # note: centering X variable by year
+#' result3 <- defit(data=example3_c,model = model3,plot=FALSE)
+#'
+#' #--------------
+#' # eg4. An example of the multilevel bivariate first-order differential equations
+#' data('example3')
+#' model4 <- '
+#'    X =~ current
+#'    Y =~ expected
+#'    time =~ myTime
+#'    X(1) ~ X + Y + (1 + X + Y | year)
+#'    Y(1) ~ X + Y + (1 + X + Y | year)
+#'    '
+#' example4_use <- example3[(example3["year"] >= 2015)&(example3["year"] <= 2018),] # Note: select a subset of the data as an example.
+#' example4_c <- scale_within(example4_use, model4) # centering X and Y variable by year
+#' result4 <- defit(data=example4_c,model = model4,plot=FALSE)
+#'
 #' ```
 #' @md
 #' @returns object: directly type the defit object will print all results. The function summary is used to print the summary of all results, and the exact values of each result can be extracted by the "$" operator.
@@ -52,11 +79,12 @@
 #' result2 <- defit(data = example2, model = model2)
 #' result2
 #' # extract details and values
-#' result2$summary()
-#' result2$userdata
-#' result2$parameter$par
-#' result2$equation
-#' result2$table
+#' # result2$summary()
+#' # result2$userdata
+#' # result2$parameter$par
+#' # result2$equation
+#' # result2$table
+#' # result2$plot()
 #'
 
 defit <- function(data,model,guess=NULL,method=NULL,plot=FALSE){
@@ -65,6 +93,7 @@ defit <- function(data,model,guess=NULL,method=NULL,plot=FALSE){
                                    chooseModel = NULL,
                                    userdata = NULL,
                                    guess = NULL,
+                                   guess2 = NULL,
                                    method = NULL,
                                    parameter = NULL,
                                    predict = NULL,
@@ -80,6 +109,12 @@ defit <- function(data,model,guess=NULL,method=NULL,plot=FALSE){
                                    print = function(...){
                                      print(self$table)
                                    },
+                                   plot = function(...){
+                                     outPlot <- PlotDe_func(userdata = self$userdata,
+                                                            predictor = self$predict,
+                                                            model=self$model,
+                                                            chooseModel=self$chooseModel)
+                                   },
                                    summary = function(...){
                                      cat('-------Your Model-------\n')
                                      print(self$model)
@@ -87,10 +122,16 @@ defit <- function(data,model,guess=NULL,method=NULL,plot=FALSE){
                                      print(self$userdata[1:3,])
                                      cat('-------Your Results-------\n')
                                      cat('The fitted differential equation(s) \n')
-                                     print(self$equation)
+                                     for (i_equ in self$equation){
+                                       print(i_equ)
+                                     }
+                                     cat('-------Your method-------\n')
                                      cat('The optimization method is ',self$method,'\n',sep='')
+                                     cat('-------Summary table-------\n')
                                      print(self$table)
                                      cat(self$convergence)
+                                     cat('\nr_square:',self$r_squared)
+                                     cat('\nRMSE:',self$RMSE)
                                    }),
                        )
   model <- AdjustModel_func(model = model)
@@ -114,15 +155,29 @@ defit <- function(data,model,guess=NULL,method=NULL,plot=FALSE){
                         model=model,
                         guess=InitOption$guess,
                         method=InitOption$method,
-                        chooseModel=chooseModel)
+                        chooseModel=chooseModel,
+                        guess2=InitOption$guess2)
   # print(calcDe$table)
-  if(plot == TRUE){
-    outPlot <- PlotDe_func(userdata = calcDe$userdata,calcdata = calcDe$Predictor)
-    print(outPlot)
-  }
   # print(calcDe$IsConvergence)
   outObject$parameter <- calcDe$Parameter
+
+  var_model = outObject$model
+  var_model = var_model[which(var_model['operator']=='=~'),]
+  var_model = var_model[(which(var_model['field'] != 'time')),]
+
   outObject$predict <- calcDe$Predictor
+  for (var_mode_i in var_model[,'field']) {
+    names(outObject$predict)[names(outObject$predict) == paste('solver_',var_mode_i,sep = '')] = paste(var_mode_i,'_hat',sep='')
+  }
+
+  if(plot == TRUE){
+    outPlot <- PlotDe_func(userdata = outObject$userdata,
+                           predictor = outObject$predict,
+                           model=outObject$model,
+                           chooseModel=outObject$chooseModel)
+    #print(outPlot)
+  }
+
   outObject$r_squared <- calcDe$Rsquared
   outObject$RMSE <- calcDe$Rmse
   outObject$SE <- calcDe$SE

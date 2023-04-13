@@ -19,7 +19,11 @@ AdjustModel_func <- function(model){
   model <- trimws(model,which = c("both", "left", "right"), whitespace = "[ \t\r\n]")
   modellist <- strsplit(model,'\n')
   # Split the variable and data's field. Save them as dataframe
-  modelDF <- data.frame()
+  modelDF <- data.frame(field=NULL,
+                        operator=NULL,
+                        variable=NULL,
+                        fixRand=NULL,
+                        subject=NULL)
   modelunlist = unlist(modellist)
   for (i in seq(along = modelunlist)){
     if (grepl('=~',modelunlist[i])){ #if the syntax contain "=~"
@@ -27,16 +31,25 @@ AdjustModel_func <- function(model){
       modelDF[i,'field'] <- trimws(mid_operator[1],which = c("both", "left", "right"), whitespace = "[ \t\r\n]")
       modelDF[i,'operator'] <- '=~'
       modelDF[i,'variable'] <- trimws(mid_operator[2],which = c("both", "left", "right"), whitespace = "[ \t\r\n]")
+      modelDF[i,'fixRand'] <- NA
+      modelDF[i,'subject'] <- NA
     }else if (grepl('~~',modelunlist[i])){ #if the syntax contain "~~"
       mid_operator <- unlist(strsplit(modelunlist[i],'~~'))
-      modelDF[i,'field'] <- mid_operator[1]
+      modelDF[i,'field'] <- trimws(mid_operator[1],which = c("both", "left", "right"), whitespace = "[ \t\r\n]")
       modelDF[i,'operator'] <- '~~'
-      modelDF[i,'variable'] <- mid_operator[2]
+      modelDF[i,'variable'] <- trimws(mid_operator[2],which = c("both", "left", "right"), whitespace = "[ \t\r\n]")
+      modelDF[i,'fixRand'] <- NA
+      modelDF[i,'subject'] <- NA
     }else if (grepl('~',modelunlist[i])){ #if the syntax contain "~"
       mid_operator <- unlist(strsplit(modelunlist[i],'~'))
-      modelDF[i,'field'] <- mid_operator[1]
+      mid_splitoperator <- strsplit(mid_operator[2],"\\+\\s*\\(")
+      mid_fixRand <- unlist(mid_splitoperator)
+      mid_subject <- unlist(strsplit(mid_fixRand[2],'\\|'))
+      modelDF[i,'field'] <- trimws(mid_operator[1],which = c("both", "left", "right"), whitespace = "[ \t\r\n]")
       modelDF[i,'operator'] <- '~'
-      modelDF[i,'variable'] <- mid_operator[2]
+      modelDF[i,'variable'] <- trimws(mid_fixRand[1],which = c("both", "left", "right"), whitespace = "[ \t\r\n]")
+      modelDF[i,'fixRand'] <- trimws(mid_subject[1],which = c("both", "left", "right"), whitespace = "[ \t\r\n]")
+      modelDF[i,'subject'] <- trimws(mid_subject[2],which = c("both", "left", "right"), whitespace = "[ \t\r\n)]")
     }
   }
 

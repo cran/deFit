@@ -39,14 +39,14 @@ table: a summary table of parameter estimates and their corresponding SEs.
 convergence: a message returns the result of the optimization convergence check.
 }
 \description{
-Use numerical optimization to fit ordinary differential equations (ODEs) to time series data to examine the dynamic relationships between variables or the characteristics of a dynamical system. It can now be used to estimate the parameters of ODEs up to second order.
+Use numerical optimization to fit ordinary differential equations (ODEs) to time series data to examine the dynamic relationships between variables or the characteristics of a dynamical system. It can now be used to estimate the parameters of ODEs up to second order, and can also apply to multilevel systems.
 }
 \details{
 We suggest choosing the method by default. The guess values contain the coefficient of the model and initial values (the values of t0). Different models have different number of values.
 
 Time(param) sequence for which output is wanted; the first value of times must be the initial time.
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{#eg1. An example of univariate second-order differential equation (damped oscillator model)
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# eg1. An example of the univariate second-order differential equation (damped oscillator model)
 data('example1')
 model1 <- '
    X =~ myX
@@ -64,6 +64,54 @@ result1 <- defit(data = example1, model = model1)
 #> Estimating Hessian
 # result1$table get the result
 # names(result1) get all names of object
+
+#--------------
+# eg3. An example of the multilevel univariate second-order differential equation
+data('example3')
+model3 <- '
+   X =~ current
+   time =~ myTime
+   X(2) ~ X(1) + X + (1 + X(1) + X | year)
+   '
+example3_use <- example3[(example3["year"] >= 2015)&(example3["year"] <= 2018),] # Note: select a subset of the data as an example.
+example3_c <- scale_within(example3_use, model3) # note: centering X variable by year
+result3 <- defit(data=example3_c,model = model3,plot=FALSE)
+#> subject checking
+#> Random effects and fixed effects have been defined
+#> Estimating population parameter 
+#> Waiting...
+#> next...subject...2015
+#> next...subject...2016
+#> next...subject...2017
+#> next...subject...2018
+#> Estimating R_squared
+#> Estimating RMSE
+#> Estimating Hessian
+
+#--------------
+# eg4. An example of the multilevel bivariate first-order differential equations
+data('example3')
+model4 <- '
+   X =~ current
+   Y =~ expected
+   time =~ myTime
+   X(1) ~ X + Y + (1 + X + Y | year)
+   Y(1) ~ X + Y + (1 + X + Y | year)
+   '
+example4_use <- example3[(example3["year"] >= 2015)&(example3["year"] <= 2018),] # Note: select a subset of the data as an example.
+example4_c <- scale_within(example4_use, model4) # centering X and Y variable by year
+result4 <- defit(data=example4_c,model = model4,plot=FALSE)
+#> subject checking
+#> Random effects and fixed effects have been defined
+#> Estimating parameters 
+#> Waiting...
+#> next...subject...2015
+#> next...subject...2016
+#> next...subject...2017
+#> next...subject...2018
+#> Estimating R_squared
+#> Estimating RMSE
+#> Estimating Hessian
 }\if{html}{\out{</div>}}
 }
 \examples{
@@ -84,10 +132,11 @@ model2 <- '
 result2 <- defit(data = example2, model = model2)
 result2
 # extract details and values
-result2$summary()
-result2$userdata
-result2$parameter$par
-result2$equation
-result2$table
+# result2$summary()
+# result2$userdata
+# result2$parameter$par
+# result2$equation
+# result2$table
+# result2$plot()
 
 }
