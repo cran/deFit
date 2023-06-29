@@ -156,7 +156,8 @@ defit <- function(data,model,guess=NULL,method=NULL,plot=FALSE){
                         guess=InitOption$guess,
                         method=InitOption$method,
                         chooseModel=chooseModel,
-                        guess2=InitOption$guess2)
+                        guess2=InitOption$guess2,
+                        method2=InitOption$method2)
   # print(calcDe$table)
   # print(calcDe$IsConvergence)
   outObject$parameter <- calcDe$Parameter

@@ -10,7 +10,8 @@ CalcDe_func(
   guess = c(0, 0, 0, 0, 0, 0),
   method,
   chooseModel = NULL,
-  guess2
+  guess2,
+  method2
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ CalcDe_func(
 \item{chooseModel}{c(2,1): Bivariate first-order differential equation; c(1,2): Univariable second-order differential equation.}
 
 \item{guess2}{Use for Multilevel}
+
+\item{method2}{"Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN" and "Brent"}
 }
 \value{
 The result of optimization,SE,RMSE,r-squared,users' data,predictor data and output table.

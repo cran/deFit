@@ -49,8 +49,8 @@ Solver_BinFirst_func <- function(data,model,guess,method){
   user_rmse_data <- paste('RMSE_',var_model[1,'field'],' = ',user_rmse_data[1],
                           ' & RMSE_',var_model[2,'field'],' = ',user_rmse_data[2])
   SE_data <- Hessian_BinFirst_func(user_calc_data$calc_res$hessian)
-  outputDE1 <- paste(userdata_field[1],'(1)=',user_calc_data$calc_res$par[1],'*',userdata_field[1],'+',user_calc_data$calc_res$par[2],' * ',userdata_field[2],sep = '')
-  outputDE2 <- paste(userdata_field[2],'(1)=',user_calc_data$calc_res$par[3],'*',userdata_field[1],'+',user_calc_data$calc_res$par[4],' * ',userdata_field[2],sep = '')
+  outputDE1 <- paste(userdata_field[1],'(1) = ',user_calc_data$calc_res$par[1],' * ',userdata_field[1],' + ',user_calc_data$calc_res$par[2],' * ',userdata_field[2],sep = '')
+  outputDE2 <- paste(userdata_field[2],'(1) = ',user_calc_data$calc_res$par[3],' * ',userdata_field[1],' + ',user_calc_data$calc_res$par[4],' * ',userdata_field[2],sep = '')
   outputDE3 <- paste('Init t0_x:',user_calc_data$calc_res$par[5],', Init t0_y:',user_calc_data$calc_res$par[6])
   outtable <- data.frame()
   outtable[seq(1,6,by=1),'parameter'] = c(paste(userdata_field[1],'(0) to ',userdata_field[1],'(1)',sep = ""),

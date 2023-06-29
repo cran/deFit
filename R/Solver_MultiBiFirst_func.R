@@ -6,10 +6,11 @@
 #' @param guess Guess values that contain coefficient and initial values.
 #' @param method "Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN" and "Brent"
 #' @param guess2 Guess values of multilevel that contain coefficient and initial values.
+#' @param method2 "Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN" and "Brent"
 #'
 #' @return The result of optimization,SE,RMSE,r-squared,users's data,predictor data and output table.
 
-Solver_MultiBiFirst_func <- function(data,model,guess,method,guess2){
+Solver_MultiBiFirst_func <- function(data,model,guess,method,guess2,method2){
   # cat('### Program will fit the data with multilevel bivariate first-order differential equations')
   # print('### Firstly, we should estimate the population parameter of differential equations')
   # ###the variable of model
@@ -44,7 +45,7 @@ Solver_MultiBiFirst_func <- function(data,model,guess,method,guess2){
                                         userdata=data,
                                         model=model,
                                         fixvalues=fixvalues,
-                                        method = method
+                                        method = method2
                                         )
   outputDE0 <- 'Fixed effects:'
   outputDE1 <- paste(var_model[1,'field'],'(1)=',min_population_data$par[1],'*',var_model[1,'field'],'+',min_population_data$par[2],' * ',var_model[2,'field'],sep = '')
@@ -82,11 +83,11 @@ Solver_MultiBiFirst_func <- function(data,model,guess,method,guess2){
   outputDE5[4,'Std.Dev.'] = sqrt(outputDE5[4,'Variance'])
   outputDE5[5,'Groups'] = 'Subject'
   outputDE5[5,'Name'] = paste('init_',var_model[1,'field'],sep='')
-  outputDE5[5,'Variance'] = stats::var(Predictor_data[Predictor_data['time'] == Predictor_data[1,'time'],paste('etaInit',var_model[1,'field'],'i1',sep='')])
+  outputDE5[5,'Variance'] = stats::var(Predictor_data[Predictor_data['time'] == Predictor_data[1,'time'],paste('etaInit_',var_model[1,'field'],sep='')])
   outputDE5[5,'Std.Dev.'] = sqrt(outputDE5[5,'Variance'])
   outputDE5[6,'Groups'] = 'Subject'
   outputDE5[6,'Name'] = paste('init_',var_model[2,'field'],sep='')
-  outputDE5[6,'Variance'] = stats::var(Predictor_data[Predictor_data['time'] == Predictor_data[1,'time'],paste('etaInit',var_model[2,'field'],'i1',sep='')])
+  outputDE5[6,'Variance'] = stats::var(Predictor_data[Predictor_data['time'] == Predictor_data[1,'time'],paste('etaInit_',var_model[2,'field'],sep='')])
   outputDE5[6,'Std.Dev.'] = sqrt(outputDE5[6,'Variance'])
   outputDE6 <- paste('Number of obs:',nrow(Predictor_data),', groups:',sub_model[1,'subject'],',',length(unique(Predictor_data[,'subject'])))
 
@@ -188,8 +189,8 @@ min_multiBiFirst_IndiOnebyOne_func <- function(x0,userdata,model,fixvalues,metho
   mid_onebyone_df['beta2'] = fixvalues[2]
   mid_onebyone_df['beta3'] = fixvalues[3]
   mid_onebyone_df['beta4'] = fixvalues[4]
-  mid_onebyone_df['initXt0'] = fixvalues[5]
-  mid_onebyone_df['initYt0'] = fixvalues[6]
+  mid_onebyone_df[paste('Init_',var_model[1,'field'],sep='')] = fixvalues[5]
+  mid_onebyone_df[paste('Init_',var_model[2,'field'],sep='')] = fixvalues[6]
   # ###calculate/estimate the random effect
   # Identify the fix random variable
   mid_Identify_fixrand = model
@@ -248,8 +249,8 @@ min_multiBiFirst_IndiOnebyOne_func <- function(x0,userdata,model,fixvalues,metho
     mid_onebyone_df[userdata['subject']==i,'etaI2'] = mid_coef[2]
     mid_onebyone_df[userdata['subject']==i,'etaI3'] = mid_coef[3]
     mid_onebyone_df[userdata['subject']==i,'etaI4'] = mid_coef[4]
-    mid_onebyone_df[userdata['subject']==i,'etaInitXi1'] = mid_coef[5]
-    mid_onebyone_df[userdata['subject']==i,'etaInitYi1'] = mid_coef[6]
+    mid_onebyone_df[userdata['subject']==i,paste('etaInit_',var_model[1,'field'],sep='')] = mid_coef[5]
+    mid_onebyone_df[userdata['subject']==i,paste('etaInit_',var_model[2,'field'],sep='')] = mid_coef[6]
   }
   return(mid_onebyone_df)
 }
@@ -341,8 +342,8 @@ Predictor_MultiBiFirst_func <- function(detailtable,model){
   for(i in unique(detailtable[,'subject'])){
     mid_indi_table = mid_detailtable[which(mid_detailtable['subject'] == i),]
     # There are same,so use mean
-    mid_solver_df = deSolve::ode(y=c(x = mean(mid_indi_table[,'initXt0']) + mean(mid_indi_table[,'etaInitXi1']),
-                                    y = mean(mid_indi_table[,'initYt0']) + mean(mid_indi_table[,'etaInitYi1'])),
+    mid_solver_df = deSolve::ode(y=c(x = mean(mid_indi_table[,paste('Init_',var_model[1,'field'],sep='')]) + mean(mid_indi_table[,paste('etaInit_',var_model[1,'field'],sep='')]),
+                                    y = mean(mid_indi_table[,paste('Init_',var_model[2,'field'],sep='')]) + mean(mid_indi_table[,paste('etaInit_',var_model[2,'field'],sep='')])),
                                 times=times,
                                 func=solve_MultiBiFirst_func,
                                 parms=c(a = mean(mid_indi_table[,'beta1']) + mean(mid_indi_table[,'etaI1']),

@@ -4,7 +4,7 @@
 \alias{Solver_MultiBiFirst_func}
 \title{Title}
 \usage{
-Solver_MultiBiFirst_func(data, model, guess, method, guess2)
+Solver_MultiBiFirst_func(data, model, guess, method, guess2, method2)
 }
 \arguments{
 \item{data}{User's data}
@@ -16,6 +16,8 @@ Solver_MultiBiFirst_func(data, model, guess, method, guess2)
 \item{method}{"Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN" and "Brent"}
 
 \item{guess2}{Guess values of multilevel that contain coefficient and initial values.}
+
+\item{method2}{"Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN" and "Brent"}
 }
 \value{
 The result of optimization,SE,RMSE,r-squared,users's data,predictor data and output table.

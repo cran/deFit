@@ -45,11 +45,17 @@ IntiOption_func <- function(userdata,model,choosemodel,guess=NULL,method=NULL){
   if(is.null(method)){
     if(all(choosemodel == c(1,2))){
       method = 'L-BFGS-B'
+      method2 = 'L-BFGS-B'
     }else if(all(choosemodel == c(2,1))){
       method = 'L-BFGS-B'
+      method2 = 'L-BFGS-B'
     }else{
-      method = 'BFGS'
+      method = method
+      method2 = method
     }
+  }else{
+    method = method
+    method2 = method
   }
 
   # keep to modify guess values
@@ -62,6 +68,6 @@ IntiOption_func <- function(userdata,model,choosemodel,guess=NULL,method=NULL){
     # message(guess)
     guess2<- guess
   }
-  reslist <- list(data= data,choosemodel=choosemodel,guess=guess,method=method,guess2=guess2)
+  reslist <- list(data= data,choosemodel=choosemodel,guess=guess,method=method,guess2=guess2,method2=method2)
   return(reslist)
 }

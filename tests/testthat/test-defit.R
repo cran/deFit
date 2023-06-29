@@ -1,4 +1,4 @@
-test_that("Univariable first-order differential test", {
+test_that("Univariable second-order differential test", {
   data('example1')
   model1 <- '
       X =~ myX
@@ -16,7 +16,7 @@ test_that("Univariable first-order differential test", {
   }
   expect_equal(test_out,'0')
 })
-test_that("Binary first-order differential test", {
+test_that("bivariate first-order differential test", {
   data('example2')
   model2 <- '
     # define variable

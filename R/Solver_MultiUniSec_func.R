@@ -6,10 +6,12 @@
 #' @param guess Guess values that contain coefficient and initial values.
 #' @param method "Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN" and "Brent"
 #' @param guess2 Guess values of multilevel that contain coefficient and initial values.
+#' @param method2 "Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN" and "Brent"
 #'
 #' @return The result of optimization,SE,RMSE,r-squared,users's data,predictor data and output table.
 
-Solver_MultiUniSec_func <- function(data,model,guess,method,guess2){
+Solver_MultiUniSec_func <- function(data,model,guess,method,guess2,method2){
+  # message(method,method2)
   # cat('### Program will fit the data with multilevel bivariate first-order differential equations')
   # print('### Firstly, we should estimate the population parameter of differential equations')
   # ###the variable of model
@@ -43,7 +45,7 @@ Solver_MultiUniSec_func <- function(data,model,guess,method,guess2){
                                            userdata=data,
                                            model=model,
                                            fixvalues=fixvalues,
-                                           method = method
+                                           method = method2
                                            )
 
   outputDE0 <- 'Fixed effects:'
@@ -81,8 +83,8 @@ Solver_MultiUniSec_func <- function(data,model,guess,method,guess2){
   outputDE5 <- paste('Number of obs:',nrow(Predictor_data),', groups:',sub_model[1,'subject'],',',length(unique(Predictor_data[,'subject'])))
 
   outtable <- data.frame()
-  outtable[seq(1,3,by=1),'parameter'] = c(paste(var_model[1,'field'],'(0) to ',var_model[1,'field'],'(1)',sep = ""),
-                                          paste(var_model[1,'field'],'(1) to ',var_model[1,'field'],'(1)',sep = ""),
+  outtable[seq(1,3,by=1),'parameter'] = c(paste(var_model[1,'field'],'(0) to ',var_model[1,'field'],'(2)',sep = ""),
+                                          paste(var_model[1,'field'],'(1) to ',var_model[1,'field'],'(2)',sep = ""),
                                           paste('init_',var_model[1,'field'],sep='')
                                           #'init02',
                                           #'init03',
