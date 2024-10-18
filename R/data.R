@@ -14,16 +14,17 @@
 
 #' Bivariate first-order differential equation
 #'
-#' A dataset containing the myX, myY and time of almost 30 example.
+#' A dataset containing the myX, myY and time of almost 15 example.
 #'  The variables are as follows:
 #'
-#' @format A data frame with 30 rows and 4 variables:
+#' @format A data frame with 15 rows and 3 variables:
 #' \describe{
 #'   \item{myTime}{timestamp of observations; the first value of the time variable must be the initial time.}
 #'   \item{myX}{the observed scores of variable X}
 #'   \item{myY}{the observed scores of variable Y}
 #' }
 "example2"
+
 
 #' University of Michigan consumer sentiment index
 #'
@@ -44,3 +45,17 @@
 #' @source{ University of Michigan, Survey Research Center, Surveys of Consumers. https://data.sca.isr.umich.edu/}
 #'
 "example3"
+
+
+#' Bivariate first-order differential equation
+#'
+#' A dataset containing the myX, myY and time of almost 30 example.
+#'  The variables are as follows:
+#'
+#' @format A data frame with 15 rows and 3 variables:
+#' \describe{
+#'   \item{myTime}{timestamp of observations; the first value of the time variable must be the initial time.}
+#'   \item{myX}{the observed scores of variable X}
+#'   \item{myY}{the observed scores of variable Y}
+#' }
+"example4"

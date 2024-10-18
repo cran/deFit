@@ -1,0 +1,218 @@
+# Fitting Differential Equations to Time Series Data in R
+
+## About deFit
+
+### News
+
+-   Dynamic Health Lab
+
+### What is deFit?
+
+Use numerical optimization to fit ordinary differential equations (ODEs) to time series data to examine the dynamic relationships between variables or the characteristics of a dynamical system. It can now be used to estimate the parameters of ODEs up to second order, and can also apply to multilevel systems.
+
+The official reference to the deFit package is the following:
+
+> Hu, Y., & Liu, Q. (2023). deFit: Fitting Differential Equations to Time Series Data (p. 0.2.1) [Dataset]. <https://doi.org/10.32614/CRAN.package.deFit>
+
+## Univariate second-order differential equation
+
+```{r}
+library(deFit)
+data('example1')
+head(example1)
+```
+
+$$ \ddot{x} = β_1 x + β_1 \dot{x} + e $$
+
+```{r}
+library(deFit)
+data('example1')
+model1 <- '
+X =~ myX
+time =~ myTime
+X(2) ~ X(1) + X
+'
+result1 <- defit(data = example1, model = model1,plot=TRUE)
+```
+
+```{r}
+result1
+```
+
+```{r}
+result1$plot()
+```
+
+## Bivariate first-order differential equation
+
+```{r}
+library(deFit)
+data('example2')
+head(example2)
+```
+
+```{r}
+data('example2')
+model2 <- '
+# define variable
+X =~ myX
+Y =~ myY
+
+# define time
+time =~ myTime
+
+# define differential equation
+X(1) ~ X + Y
+Y(1) ~ X + Y
+'
+result2 <- defit(data = example2, model = model2,plot=TRUE)
+```
+
+```{r}
+result2$summary()
+```
+
+## Multilevel univariate second-order differential equation
+
+```{r}
+data('example3')
+head(example3)
+```
+
+```{r}
+data('example3')
+model3 <- '
+X =~ current
+time =~ myTime
+X(2) ~ X + X(1) + (1 + X + X(1) | year)
+'
+# Note: select a subset of the data as an example.
+example3_use <- example3[(example3["year"] >= 2015)&(example3["year"] <= 2018),]
+# note: centering X variable by year
+example3_c <- Scale_within(example3_use, model3) 
+result3 <- defit(data=example3_c,model = model3,plot=TRUE)
+```
+
+## Multilevel bivariate second-order differential equation
+
+```{r}
+data('example3')
+model4 <- '
+X =~ current
+Y =~ expected
+time =~ myTime
+X(1) ~ X + Y + (1 + X + Y | year)
+Y(1) ~ X + Y + (1 + X + Y | year)
+'
+# Note: select a subset of the data as an example.
+example4_use <- example3[(example3["year"] >= 2018)&(example3["year"] <= 2022),]
+# centering X and Y variable by year
+example4_c <- Scale_within(example4_use, model4) 
+result4 <- defit(data=example4_c,model = model4,plot=TRUE)
+```
+
+# Parameters of deFit
+
+## One-Step to estimate fixed effects and random effects
+
+### Multilevel univariate second-order differential equation
+
+fixed_first=FALSE
+
+```{r}
+data('example3')
+model3 <- '
+X =~ current
+time =~ myTime
+X(2) ~ X + X(1) + (1 + X + X(1) | year)
+'
+# Note: select a subset of the data as an example.
+example3_use <- example3[(example3["year"] >= 2010)&(example3["year"] <= 2022),] 
+# note: centering X variable by year
+example3_c <- Scale_within(example3_use, model3) 
+result3 <- defit(data=example3_c,model = model3,plot=TRUE,fixed_first=FALSE)
+```
+
+### Multilevel bivariate first-order differential equation
+
+fixed_first=FALSE
+
+```{r}
+library(deFit)
+data('example3')
+model4 <- '
+X =~ current
+Y =~ expected
+time =~ myTime
+X(1) ~ X + Y + (1 + X + Y | year)
+Y(1) ~ X + Y + (1 + X + Y | year)
+'
+# Note: select a subset of the data as an example.
+example4_use <- example3[(example3["year"] >= 2010)&(example3["year"] <= 2018),]
+# centering X and Y variable by year
+example4_c <- Scale_within(example4_use, model4) 
+result4 <- defit(data=example4_c,model = model4,plot=TRUE,fixed_first=FALSE)
+```
+
+# Calculating the Derivatives
+
+```{r}
+der_1 = calcDerivatives(data=example3,column='expected',groupby='year',order=2,window=5)
+der_1
+```
+
+```{r}
+der_2 = calcDerivatives(data=example3,column=c('expected','current'),groupby='year',time='myTime',order=2,window=5)
+der_2
+```
+
+# Generate bivariate first order differential equation
+
+```{r}
+Solve_BiFirst_func <- function(t,state,parms){
+  with(as.list(c(state,parms)),{
+    dX <- beta1*x + beta2*y
+    dY <- beta3*x + beta4*y
+    list(c(dX,dY))
+  })# end with(as.list ...
+}
+state = c(x=2.5,
+          y=0.1)
+times = seq(1,15)
+parms = c(
+  beta1 = -0.7,
+  beta2 = 0.2,
+  beta3 = -1.5,
+  beta4 = 0.1
+)
+
+BiFirst_df <- deSolve::ode(y=state,
+                               times=times,
+                               func=Solve_BiFirst_func,
+                               parms=parms)
+BiFirst_df = data.frame(BiFirst_df)
+names(BiFirst_df)[names(BiFirst_df) == "time"] <- "myTime"
+BiFirst_df
+
+```
+
+```{r}
+plot(BiFirst_df$myTime, BiFirst_df$x, type = "l", col = "red", ylim = range(c(BiFirst_df$x, BiFirst_df$y)), main = "Plot", xlab = "x", ylab = "y")
+
+lines(BiFirst_df$myTime, BiFirst_df$y, col = "blue")
+```
+
+```{r}
+BiFirst_df$myX = BiFirst_df$x + sd(BiFirst_df$x) / 3 * rnorm(15)
+BiFirst_df$myY = BiFirst_df$y + sd(BiFirst_df$y) / 3 * rnorm(15)
+example2 <- BiFirst_df[c('myTime','myX','myY')]
+example2
+```
+
+```{r}
+plot(example2$myTime, example2$myX, type = "l", col = "red", ylim = range(c(example2$myX, example2$myY)), main = "Plot", xlab = "myX", ylab = "myY")
+
+lines(example2$myTime, example2$myY, col = "blue")
+
+# legend("topleft", legend = c("Line1", "Line2"), col = c("red", "blue"), lty = 1)
+```

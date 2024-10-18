@@ -2,26 +2,16 @@
 % Please edit documentation in R/Solver_MultiBiFirst_func.R
 \name{Solver_MultiBiFirst_func}
 \alias{Solver_MultiBiFirst_func}
-\title{Title}
+\title{Solver of Multilevel bivariate first-order differential equation}
 \usage{
-Solver_MultiBiFirst_func(data, model, guess, method, guess2, method2)
+Solver_MultiBiFirst_func(init_list)
 }
 \arguments{
-\item{data}{User's data}
-
-\item{model}{Model's class is dataframe.}
-
-\item{guess}{Guess values that contain coefficient and initial values.}
-
-\item{method}{"Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN" and "Brent"}
-
-\item{guess2}{Guess values of multilevel that contain coefficient and initial values.}
-
-\item{method2}{"Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN" and "Brent"}
+\item{init_list}{a list of init_func}
 }
 \value{
-The result of optimization,SE,RMSE,r-squared,users's data,predictor data and output table.
+a list
 }
 \description{
-Title
+Solver of Multilevel bivariate first-order differential equation
 }
